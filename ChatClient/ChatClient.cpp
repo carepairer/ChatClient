@@ -1,20 +1,64 @@
-﻿// ChatClient.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
-//
-
-#include <iostream>
+﻿#include <iostream>
+using namespace std;
+//包含通信的头文件和库
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
 
 int main()
 {
-    std::cout << "Hello World!\n";
+	//1，初始化网络库
+	WORD wVersionRequested;
+	WSADATA wsaData;
+	wVersionRequested = MAKEWORD(2, 2);
+	if (WSAStartup(wVersionRequested, &wsaData)) {
+		cout << "初始化失败" << endl;
+		return 0;
+	}
+
+	//2.创建socket套接字
+	SOCKET s = socket(
+		AF_INET, //INET协议族
+		SOCK_STREAM, //表示使用的是TCP协议
+		0
+	);
+	if (s == INVALID_SOCKET) {
+		cout << "创建socket失败！" << endl;
+		return 0;
+	}
+
+	//4. connect 连接服务器
+	sockaddr_in addr;
+	addr.sin_family = AF_INET; //协议族
+	inet_pton(PF_INET, "127.0.0.1", &addr.sin_addr);//服务端IP
+	addr.sin_port = htons(10086); //网络字节序（大尾方式）， 本地字节序（小尾方式）， 需要转换
+	int nRet = connect(s, (sockaddr*)&addr, sizeof(addr));
+	if (SOCKET_ERROR == nRet) {
+		cout << "连接失败" << endl;
+		return 0;
+	}
+	else {
+		cout << "连接成功，等待服务器第一次发送信息...." << endl;
+	}
+
+	//5. send/recv 发送/接受消息
+	while (true) {
+		char szBuf[256] = { 0 };
+		recv(s, szBuf, 256, 0);
+		cout << "服务器" << szBuf << endl;
+
+		cout << "请您输入需要发送的数据：";
+		char sendMsg[256] = { 0 };
+		cin.getline(sendMsg, 256);
+		send(s, sendMsg, strlen(sendMsg) + 1, 0);
+		cout << "数据发送成功，等待对面回复。。。。" << endl;
+	}
+
+	//6.关闭socket  
+	closesocket(s);
+
+	//7.反初始化操作
+	WSACleanup();
+
+	return 1;
 }
-
-// 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
-// 调试程序: F5 或调试 >“开始调试”菜单
-
-// 入门使用技巧: 
-//   1. 使用解决方案资源管理器窗口添加/管理文件
-//   2. 使用团队资源管理器窗口连接到源代码管理
-//   3. 使用输出窗口查看生成输出和其他消息
-//   4. 使用错误列表窗口查看错误
-//   5. 转到“项目”>“添加新项”以创建新的代码文件，或转到“项目”>“添加现有项”以将现有代码文件添加到项目
-//   6. 将来，若要再次打开此项目，请转到“文件”>“打开”>“项目”并选择 .sln 文件
